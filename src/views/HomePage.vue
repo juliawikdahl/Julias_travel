@@ -58,7 +58,8 @@
         <p><strong>Avresedatum och tid:</strong> {{ formatDate(result.itineraries[0].segments[0].departure.at) }}</p>
         <p><strong>Till:</strong> {{ result.itineraries[0].segments[result.itineraries[0].segments.length - 1].arrival.iataCode }}, {{ destinationInput }}</p>
         <p><strong>Ankomstdatum och tid:</strong> {{ formatDate(result.itineraries[0].segments[result.itineraries[0].segments.length - 1].arrival.at) }}</p>
-        <p><strong>Restid:</strong> {{ result.itineraries[0].duration }}</p>
+        <p><strong>Restid:</strong> {{ formatDuration(result.itineraries[0].duration) }}</p>
+
         <p><strong>Direktflyg:</strong> {{ result.itineraries[0].segments.length === 1 ? 'Ja' : 'Nej' }}</p>
         
         <!-- Visa väntetiden -->
@@ -74,7 +75,8 @@
             <p><strong>Avresa:</strong> {{ formatDate(segment.departure.at) }}</p>
             <p><strong>Till:</strong> {{ segment.arrival.iataCode }}</p>
             <p><strong>Ankomst:</strong> {{ formatDate(segment.arrival.at) }}</p>
-            <p><strong>Flygtid:</strong> {{ segment.duration }}</p>
+            <p><strong>Restid:</strong> {{ formatDuration(result.itineraries[0].duration) }}</p>
+
           </li>
         </ul>
         
@@ -170,6 +172,7 @@ export default {
         return [];
       }
     },
+ 
     async submitSearch() {
       try {
         const response = await fetch('https://test.api.amadeus.com/v2/shopping/flight-offers', {
@@ -201,19 +204,24 @@ export default {
         }
 
         const data = await response.json();
+        
         this.searchResults = data.data;
+        
         console.log('sökresultat', this.searchResults)
       } catch (error) {
         console.error('Fel vid sökning efter flygerbjudanden:', error);
         this.errorFetchingFlights = true;
       }
     },
+
     handleInputFrom: debounce(async function() {
       this.filteredLocations = await this.fetchLocations(this.fromInput);
     }, 300),
+
     handleInputDestination: debounce(async function() {
       this.filteredDestinations = await this.fetchLocations(this.destinationInput);
     }, 300),
+
     selectLocation(location, type) {
       if (type === 'from') {
         this.from = location.iataCode;
@@ -297,6 +305,32 @@ export default {
     } else {
       // Om timmar är 0 eller mindre, visa inget
       return 'Mindre än en timme';
+    }
+  },
+  formatDuration(duration) {
+    try {
+      // Parse duration from PTnHnM format
+      const regex = /PT(?:(\d+)H)?(?:(\d+)M)?/;
+      const match = duration.match(regex);
+      if (!match) {
+        throw new Error('Invalid duration format');
+      }
+      
+      const hours = match[1] ? parseInt(match[1]) : 0;
+      const minutes = match[2] ? parseInt(match[2]) : 0;
+      
+      if (hours > 0 && minutes > 0) {
+        return `${hours} timmar och ${minutes} minuter`;
+      } else if (hours > 0) {
+        return `${hours} timmar`;
+      } else if (minutes > 0) {
+        return `${minutes} minuter`;
+      } else {
+        return 'Mindre än en timme';
+      }
+    } catch (error) {
+      console.error('Error formatting duration:', error);
+      return 'Okänt';
     }
   },
   
